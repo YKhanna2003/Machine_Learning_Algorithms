@@ -23,13 +23,13 @@ The code includes the evaluation of multiple MLP models with different configura
 
 - Ensure you have the required Python libraries installed. You can install them using pip if they are not already installed:  
 
-    pip install pandas numpy matplotlib scikit-learn tensorflow
+        pip install pandas numpy matplotlib scikit-learn tensorflow
 
 - Download the MNIST dataset and save it as "mnist_train.csv" and "mnist_test.csv" in the "./Dataset/archive/" directory.  
 
 - Run the main script by executing the following command:  
     
-    python mnist_main.py
+        python mnist_main.py
 
 - Review the results printed to the console for the various MLP model configurations.  
 
