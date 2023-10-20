@@ -1,0 +1,2 @@
+Please download the dataset from here and extract before running the main.
+Link:- https://www.kaggle.com/datasets/oddrationale/mnist-in-csv/data
