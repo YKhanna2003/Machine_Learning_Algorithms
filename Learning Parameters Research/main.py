@@ -17,6 +17,8 @@ class MLModel:
         self.X_test = None
         self.y_train = None
         self.y_test = None
+        self.clf = None
+        self.map_dictionary = {}
     
     def setup(self, target_directory):
         os.system('kaggle datasets download -d wanghaohan/confused-eeg')
@@ -47,37 +49,65 @@ class MLModel:
         X_int = self.df.drop('user-definedlabeln', axis=1).values
         Y_int = self.df['user-definedlabeln'].values
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_int, Y_int, test_size=ratio, random_state=42)
+        for index, value in enumerate(self.X_train):
+            self.map_dictionary[tuple(self.X_train[index])]=self.y_train[index]
+        for index, value in enumerate(self.X_test):
+            self.map_dictionary[tuple(self.X_test[index])]=self.y_test[index]
 
     def random_forest_model(self, show_plot=False):
         accuracies = []
+        estimators = []
         for i in range(40, 45):
             clf = RandomForestClassifier(n_estimators=i, max_depth=2, random_state=13)
             clf.fit(self.X_train, self.y_train)
             y_pred = clf.predict(self.X_test)
             score = clf.score(self.X_test, self.y_test)
             accuracies.append(score)
+            estimators.append(i)
 
         if show_plot:
             self.plot_accuracies(accuracies, range(25, 50), 'Random Forest Classifier Accuracy vs. n_estimators')
 
+        maxi_acc = max(accuracies)
+        i = 0
+        optimal_estimator = estimators[i]
+        for acc in accuracies:
+            if acc==maxi_acc:
+                optimal_estimator = estimators[i]
+            i = i+1
+        
+        self.clf = RandomForestClassifier(n_estimators=optimal_estimator,max_depth=2,random_state=13)
         return max(accuracies)
 
     def svm_model(self):
         clf = svm.SVC()
         clf.fit(self.X_train, self.y_train)
         preds = clf.predict(self.X_test)
+        self.clf=clf
         return clf.score(self.X_test, self.y_test)
 
     def boosted_trees(self, show_plot=False):
         accuracies = []
+        estimators = []
         for i in range(1, 5):
             xg = xgb.XGBClassifier(objective='binary:logistic', n_estimators=i, seed=1)
             xg.fit(self.X_train, self.y_train)
             predict = xg.predict(self.X_test)
             accuracies.append(xg.score(self.X_test, self.y_test))
+            estimators.append(i)
 
         if show_plot:
             self.plot_accuracies(accuracies, range(1, 5), 'Boosted Accuracy vs. n_estimators')
+
+        maxi_acc = max(accuracies)
+        i = 0
+        optimal_estimator = estimators[i]
+        for acc in accuracies:
+            if acc==maxi_acc:
+                optimal_estimator = estimators[i]
+            i = i+1
+        
+        self.clf = xgb.XGBClassifier(objective='binary:logistic', n_estimators=optimal_estimator, seed=1)
 
         return max(accuracies)
 
@@ -93,7 +123,7 @@ class MLModel:
         plt.figure(figsize=(10, 6))
         plt.plot(x_values, accuracies, marker='o', linestyle='-', color='b')
         plt.title(title)
-        plt.xlabel('n_estimators' if 'Random Forest' in title else 'Ratios')
+        plt.xlabel('Ratios' if 'Ratios' in title else 'Features Removed')
         plt.ylabel('Accuracy')
         plt.grid(True)
         plt.show()
@@ -136,6 +166,26 @@ class MLModel:
             accuracies.append(m.random_forest_model())
             ratio_i += 0.025
         return max(accuracies)
+    
+    def return_model(self):
+        return self.clf
+    
+    def get_top_n_samples(self, n):
+        self.clf.fit(m.X_train, m.y_train)  # Train your model
+        print(self.clf)
+        # Get the predicted probabilities for class 0 and class 1
+        probabilities = self.clf.predict_proba(self.X_test)
+        # Calculate the absolute differences between class 0 and class 1 probabilities
+        abs_differences = abs(probabilities[:, 0] - probabilities[:, 1])
+        # Sort the absolute differences and get the indices of the sorted elements
+        sorted_indices = abs_differences.argsort()
+        # Retrieve the top n entries from self.X_test based on the sorted indices
+        top_n_samples = self.X_test[sorted_indices[:n]]
+
+        y_samples = []
+        for i in top_n_samples:
+            y_samples.append(self.map_dictionary[tuple(i)])
+        return top_n_samples,y_samples
 
 def sorted_correlation(data, output_feature):
     output_variable = data[output_feature]
@@ -163,98 +213,154 @@ if __name__ == "__main__":
     data = m.return_data()
     print(df.columns)
     print(data['user-definedlabeln'].unique())
-    
-    m.plot_correlation_matrix()
-    
-    # Random Forest Model, considering all the features
-    accuracies = []
-    ratio_arr = []
-    ratio_i = 0.05
-    while ratio_i < 1:
-        ratio_arr.append(ratio_i)
-        m.split(ratio=ratio_i)
-        accuracies.append(m.random_forest_model())
-        ratio_i += 0.025
-    m.plot_accuracies(accuracies, ratio_arr, 'Random Forest Model: Accuracies vs. Ratios')
-    print(ratio_arr)
-    print(accuracies)
+    print(len(data))
+    # m.plot_correlation_matrix()
+    # print("Random Forest Model, considering all the features")
+    # # Random Forest Model, considering all the features
+    # accuracies = []
+    # ratio_arr = []
+    # ratio_i = 0.05
+    # while ratio_i < 1:
+    #     ratio_arr.append(ratio_i)
+    #     m.split(ratio=ratio_i)
+    #     accuracies.append(m.random_forest_model())
+    #     ratio_i += 0.025
+    # m.plot_accuracies(accuracies, ratio_arr, 'Random Forest Model: Accuracies vs. Ratios')
+    # print(ratio_arr)
+    # print(accuracies)
 
     print(sorted_correlation(data=data, output_feature='user-definedlabeln'))
     corr_arr = sorted_correlation(data=data, output_feature='user-definedlabeln')
     corr_arr = reverse(corr_arr)
 
-    # SVM Machine, considering all the features
-    accuracies = []
-    ratio_arr = []
-    ratio_i = 0.1
-    while ratio_i < 0.9:
-        ratio_arr.append(ratio_i)
-        m.split(ratio=ratio_i)
-        accuracies.append(m.svm_model())
-        ratio_i += 0.1
-    m.plot_accuracies(accuracies, ratio_arr, 'SVM Model: Accuracies vs. Ratios')
-    print(ratio_arr)
-    print(accuracies)
+    # # SVM Machine, considering all the features
+    # accuracies = []
+    # ratio_arr = []
+    # ratio_i = 0.1
+    # while ratio_i < 0.9:
+    #     ratio_arr.append(ratio_i)
+    #     m.split(ratio=ratio_i)
+    #     accuracies.append(m.svm_model())
+    #     ratio_i += 0.1
+    # m.plot_accuracies(accuracies, ratio_arr, 'SVM Model: Accuracies vs. Ratios')
+    # print(ratio_arr)
+    # print(accuracies)
 
-    # Boosted Trees, considering all the features
-    accuracies = []
-    ratio_arr = []
-    ratio_i = 0.1
-    while ratio_i < 0.9:
-        ratio_arr.append(ratio_i)
-        m.split(ratio=ratio_i)
-        accuracies.append(m.boosted_trees())
-        ratio_i += 0.1
-    m.plot_accuracies(accuracies, ratio_arr, 'Boosted Trees (XGBoost) Model: Accuracies vs. Ratios')
-    print(ratio_arr)
-    print(accuracies)
+    # # Boosted Trees, considering all the features
+    # accuracies = []
+    # ratio_arr = []
+    # ratio_i = 0.1
+    # while ratio_i < 0.9:
+    #     ratio_arr.append(ratio_i)
+    #     m.split(ratio=ratio_i)
+    #     accuracies.append(m.boosted_trees())
+    #     ratio_i += 0.1
+    # m.plot_accuracies(accuracies, ratio_arr, 'Boosted Trees (XGBoost) Model: Accuracies vs. Ratios')
+    # print(ratio_arr)
+    # print(accuracies)
 
-    df_temp = df.copy()
-    accuracies = []
-    number_removed = []
-    i=0
-    while i<len(corr_arr)-1:
-        accuracies.append(m.remove_and_boost(corr_arr[i:i+1]))
-        number_removed.append(i+1)
-        i = i+1
+    # df_temp = df.copy()
+    # accuracies = []
+    # number_removed = []
+    # i=0
+    # while i<len(corr_arr)-1:
+    #     accuracies.append(m.remove_and_boost(corr_arr[i:i+1]))
+    #     number_removed.append(i+1)
+    #     i = i+1
 
-    df=df_temp.copy()
-    m.plot_accuracies(accuracies, number_removed, 'Boosted Trees (XGBoost) Model: Accuracies vs. Features Removed')
-    print(number_removed)
-    print(accuracies)
+    # df=df_temp.copy()
+    # m.plot_accuracies(accuracies, number_removed, 'Boosted Trees (XGBoost) Model: Accuracies vs. Features Removed')
+    # print(number_removed)
+    # print(accuracies)
 
-    m.setup_dataframe(include_demographics=False,print_stats=False)
+    # m.setup_dataframe(include_demographics=False,print_stats=False)
     
-    accuracies = []
-    removed_tracker = []
-    number_removed = []
-    i=0
-    while i<len(corr_arr)-1:
-        removed_tracker.append(corr_arr[i:i+1])
-        print("Working with the Subset Removed: {}".format(removed_tracker))
-        accuracies.append(m.remove_and_svm(corr_arr[i:i+1]))
-        number_removed.append(i+1)
-        i = i+1
-    df=df_temp.copy()
-    m.plot_accuracies(accuracies, number_removed, 'SVM Model: Accuracies vs. Features Removed')
-    print(number_removed)
-    print(accuracies)
+    # accuracies = []
+    # removed_tracker = []
+    # number_removed = []
+    # i=0
+    # while i<len(corr_arr)-1:
+    #     removed_tracker.append(corr_arr[i:i+1])
+    #     print("Working with the Subset Removed: {}".format(removed_tracker))
+    #     accuracies.append(m.remove_and_svm(corr_arr[i:i+1]))
+    #     number_removed.append(i+1)
+    #     i = i+1
+    # df=df_temp.copy()
+    # m.plot_accuracies(accuracies, number_removed, 'SVM Model: Accuracies vs. Features Removed')
+    # print(number_removed)
+    # print(accuracies)
+
+    # m.setup_dataframe(include_demographics=False,print_stats=False)
+
+    # accuracies = []
+    # removed_tracker = []
+    # number_removed = []
+    # i=0
+    # while i<len(corr_arr)-1:
+    #     removed_tracker.append(corr_arr[i:i+1])
+    #     print("Working with the Subset Removed: {}".format(removed_tracker))
+    #     accuracies.append(m.remove_and_forest(corr_arr[i:i+1]))
+    #     number_removed.append(i+1)
+    #     i = i+1
+    # df=df_temp.copy()
+    # m.plot_accuracies(accuracies, number_removed, 'Forest Model: Accuracies vs. Features Removed')
+    # print(number_removed)
+    # print(accuracies)
+
+    m.split(ratio=0.67)
+    print("Accuracy is {}".format(m.random_forest_model()))
 
     m.setup_dataframe(include_demographics=False,print_stats=False)
 
-    accuracies = []
-    removed_tracker = []
-    number_removed = []
-    i=0
-    while i<len(corr_arr)-1:
-        removed_tracker.append(corr_arr[i:i+1])
-        print("Working with the Subset Removed: {}".format(removed_tracker))
-        accuracies.append(m.remove_and_forest(corr_arr[i:i+1]))
-        number_removed.append(i+1)
-        i = i+1
-    df=df_temp.copy()
-    m.plot_accuracies(accuracies, number_removed, 'Forest Model: Accuracies vs. Features Removed')
-    print(number_removed)
-    print(accuracies)
+    X_train = m.X_train
+    y_train = m.y_train
+    print(len(X_train))
+    print("Ratio of train/test is {}".format(len(m.X_train)/len(data)))
 
-    m.setup_dataframe(include_demographics=False,print_stats=False)
+    clf = m.return_model()
+    clf.fit(X_train, y_train)  # Train your model
+    print(clf)
+
+    print(clf.score(m.X_test, m.y_test))
+    # uncertainty_scores = clf.predict_proba(m.X_test)
+    # print(uncertainty_scores)
+
+    top_samples, y_samples = m.get_top_n_samples(10)
+    print(clf.predict_proba(top_samples))
+    print(top_samples)
+    print(y_samples)
+
+    my_2d_list = top_samples
+    # Calculate the number of rows and columns
+    num_rows = len(my_2d_list)
+    num_columns = len(my_2d_list[0])
+
+    # Print the shape
+    print(f"Shape of the top samples: ({num_rows}, {num_columns})")
+    print(f"Shape of the inital X_train: ({len(X_train)}, {len(X_train[0])})")
+
+    print(type(X_train))
+    print(X_train)
+    print(type(top_samples))
+
+    print("Size before appending is {}".format(len(X_train)))
+    # working with 10 samples first
+    #for i in range(1, len(top_samples)):
+    X_train = np.concatenate((X_train, top_samples), axis=0)
+        #X_train = np.concatenate(X_train,i)
+        # X_train = X_train.concatenate(np.ndarray(i))
+    print("Size after appending is {}".format(len(X_train)))
+    print("Y Size before appending is {}".format(len(y_train)))
+
+    y_train = np.concatenate((y_train,y_samples), axis =0)
+    print("Y Size after appending is {}".format(len(y_train)))
+
+    clf = None
+    clf = m.return_model()
+    clf.fit(X_train, y_train)  # Train your model
+    print(clf)
+
+    # uncertainty_scores = clf.predict_proba(m.X_test)
+    # print(uncertainty_scores)
+
+    print(clf.score(m.X_test, m.y_test))
