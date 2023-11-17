@@ -48,7 +48,7 @@ class MLModel:
     def split(self, ratio):
         X_int = self.df.drop('user-definedlabeln', axis=1).values
         Y_int = self.df['user-definedlabeln'].values
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_int, Y_int, test_size=ratio, random_state=42)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_int, Y_int, test_size=ratio)
         for index, value in enumerate(self.X_train):
             self.map_dictionary[tuple(self.X_train[index])]=self.y_train[index]
         for index, value in enumerate(self.X_test):
@@ -58,7 +58,7 @@ class MLModel:
         accuracies = []
         estimators = []
         for i in range(40, 45):
-            clf = RandomForestClassifier(n_estimators=i, max_depth=2, random_state=13)
+            clf = RandomForestClassifier(n_estimators=i, max_depth=2)
             clf.fit(self.X_train, self.y_train)
             y_pred = clf.predict(self.X_test)
             score = clf.score(self.X_test, self.y_test)
@@ -76,7 +76,7 @@ class MLModel:
                 optimal_estimator = estimators[i]
             i = i+1
         
-        self.clf = RandomForestClassifier(n_estimators=optimal_estimator,max_depth=2,random_state=13)
+        self.clf = RandomForestClassifier(n_estimators=optimal_estimator,max_depth=2)
         return max(accuracies)
 
     def svm_model(self):
@@ -307,60 +307,55 @@ if __name__ == "__main__":
     # print(number_removed)
     # print(accuracies)
 
-    m.split(ratio=0.67)
-    print("Accuracy is {}".format(m.random_forest_model()))
-
+    uncertain_sample_num = 500
+    m.split(ratio=0.75)
+    m.random_forest_model()
     m.setup_dataframe(include_demographics=False,print_stats=False)
 
     X_train = m.X_train
     y_train = m.y_train
-    print(len(X_train))
-    print("Ratio of train/test is {}".format(len(m.X_train)/len(data)))
+    
+    print("\nTotal in Training Set is {} and Ratio of Train/Total is {}".format(len(X_train),len(X_train)/len(data)))
 
+    print("\nBefore Sampling\n")
     clf = m.return_model()
-    clf.fit(X_train, y_train)  # Train your model
-    print(clf)
+    clf.fit(X_train, y_train)  
+    print("Accuracy:- {}".format(clf.score(m.X_test, m.y_test)*100))
 
-    print(clf.score(m.X_test, m.y_test))
-    # uncertainty_scores = clf.predict_proba(m.X_test)
-    # print(uncertainty_scores)
+    printing_stats = False
+    top_samples, y_samples = m.get_top_n_samples(uncertain_sample_num)
+    if printing_stats:
+        print(clf)
+        print(clf.predict_proba(top_samples))
+        print(top_samples)
+        print(y_samples)
+        print(f"Shape of the top samples: ({len(top_samples)}, {len(top_samples[0])})")
+        print(f"Shape of the inital X_train: ({len(X_train)}, {len(X_train[0])})")
+        print(type(X_train))
+        print(X_train)
+        print(type(top_samples))
 
-    top_samples, y_samples = m.get_top_n_samples(10)
-    print(clf.predict_proba(top_samples))
-    print(top_samples)
-    print(y_samples)
-
-    my_2d_list = top_samples
-    # Calculate the number of rows and columns
-    num_rows = len(my_2d_list)
-    num_columns = len(my_2d_list[0])
-
-    # Print the shape
-    print(f"Shape of the top samples: ({num_rows}, {num_columns})")
-    print(f"Shape of the inital X_train: ({len(X_train)}, {len(X_train[0])})")
-
-    print(type(X_train))
-    print(X_train)
-    print(type(top_samples))
-
-    print("Size before appending is {}".format(len(X_train)))
-    # working with 10 samples first
-    #for i in range(1, len(top_samples)):
-    X_train = np.concatenate((X_train, top_samples), axis=0)
-        #X_train = np.concatenate(X_train,i)
-        # X_train = X_train.concatenate(np.ndarray(i))
-    print("Size after appending is {}".format(len(X_train)))
+    print("\nX Size before appending is {}".format(len(X_train)))
     print("Y Size before appending is {}".format(len(y_train)))
-
+    X_train = np.concatenate((X_train, top_samples), axis=0)
     y_train = np.concatenate((y_train,y_samples), axis =0)
+    print("X Size after appending is {}".format(len(X_train)))
     print("Y Size after appending is {}".format(len(y_train)))
 
+    print("\nAfter Uncertainty Sampling:-")
     clf = None
     clf = m.return_model()
     clf.fit(X_train, y_train)  # Train your model
-    print(clf)
+    print("Accuracy for training data size {}:- {}".format(len(X_train),clf.score(m.X_test, m.y_test)*100))
 
-    # uncertainty_scores = clf.predict_proba(m.X_test)
-    # print(uncertainty_scores)
+    new_split_ratio = len(X_train)/len(data)
+    print("\nNew Split Ratio is {}".format(new_split_ratio))
+    m.split(ratio=1-new_split_ratio)
+    m.random_forest_model()
+    m.setup_dataframe(include_demographics=False,print_stats=False)
 
-    print(clf.score(m.X_test, m.y_test))
+    print("\nRandom Sampling with the new ratio:-")
+    clf = None
+    clf = m.return_model()
+    clf.fit(m.X_train, m.y_train)  # Train your model
+    print("Accuracy for training data size {}:- {}".format(len(m.X_train),clf.score(m.X_test, m.y_test)*100))
