@@ -46,6 +46,10 @@ class MLModel:
         return self.df
 
     def split(self, ratio):
+        self.X_train = None 
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
         X_int = self.df.drop('user-definedlabeln', axis=1).values
         Y_int = self.df['user-definedlabeln'].values
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_int, Y_int, test_size=ratio)
@@ -201,7 +205,7 @@ def sorted_correlation(data, output_feature):
 
     correlations.sort(key=lambda x: abs(x[1]), reverse=True)
     correlations_array = np.array(correlations)
-    print(correlations_array)
+    #print(correlations_array)
     feature_names_array = np.array([item[0] for item in correlations_array])
     return feature_names_array
 
@@ -210,106 +214,129 @@ def reverse(lst):
     return new_lst
 
 if __name__ == "__main__":
-    m = MLModel()
+    print_info = True
+    random_forest_model_info = True
+    svm_model_info = True
+    boosted_trees_info = True
+    m= MLModel()
     m.setup('data')
     df = m.setup_dataframe(include_demographics=False, print_stats=False)
     data = m.return_data()
-    print(df.columns)
-    print(data['user-definedlabeln'].unique())
-    print(len(data))
-    # m.plot_correlation_matrix()
-    # print("Random Forest Model, considering all the features")
-    # # Random Forest Model, considering all the features
-    # accuracies = []
-    # ratio_arr = []
-    # ratio_i = 0.05
-    # while ratio_i < 1:
-    #     ratio_arr.append(ratio_i)
-    #     m.split(ratio=ratio_i)
-    #     accuracies.append(m.random_forest_model())
-    #     ratio_i += 0.025
-    # m.plot_accuracies(accuracies, ratio_arr, 'Random Forest Model: Accuracies vs. Ratios')
-    # print(ratio_arr)
-    # print(accuracies)
+    
+    if print_info:
+        print(df.columns)
+        print(data['user-definedlabeln'].unique())
+        print(len(data))
+        m.plot_correlation_matrix()
+    
+    if random_forest_model_info:
+        print("Random Forest Model, considering all the features")
+        # Random Forest Model, considering all the features
+        accuracies = []
+        ratio_arr = []
+        ratio_i = 0.1
+        while ratio_i <= 0.9:
+            ratio_arr.append(ratio_i)
+            m.split(ratio=ratio_i)
+            accuracies.append(m.random_forest_model())
+            ratio_i += 0.05
+        m.plot_accuracies(accuracies, ratio_arr, 'Random Forest Model: Accuracies vs. Test/Total Ratios')
+        print(ratio_arr)
+        print(accuracies)
+        print(len(m.return_data()))
+        print(len(m.X_train))
+        print("Maximum Accuracy for Random Forest Model is {}".format(max(accuracies)))
 
-    print(sorted_correlation(data=data, output_feature='user-definedlabeln'))
+    #print(sorted_correlation(data=data, output_feature='user-definedlabeln'))
     corr_arr = sorted_correlation(data=data, output_feature='user-definedlabeln')
     corr_arr = reverse(corr_arr)
 
-    # # SVM Machine, considering all the features
-    # accuracies = []
-    # ratio_arr = []
-    # ratio_i = 0.1
-    # while ratio_i < 0.9:
-    #     ratio_arr.append(ratio_i)
-    #     m.split(ratio=ratio_i)
-    #     accuracies.append(m.svm_model())
-    #     ratio_i += 0.1
-    # m.plot_accuracies(accuracies, ratio_arr, 'SVM Model: Accuracies vs. Ratios')
-    # print(ratio_arr)
-    # print(accuracies)
+    if svm_model_info:
+        # SVM Machine, considering all the features
+        accuracies = []
+        ratio_arr = []
+        ratio_i = 0.1
+        while ratio_i < 0.9:
+            ratio_arr.append(ratio_i)
+            m.split(ratio=ratio_i)
+            accuracies.append(m.svm_model())
+            ratio_i += 0.1
+        m.plot_accuracies(accuracies, ratio_arr, 'SVM Model: Accuracies vs. Test/Total Ratios')
+        print(ratio_arr)
+        print(accuracies)
+        print("Maximum Accuracy for SVM Model is {}".format(max(accuracies)))
 
-    # # Boosted Trees, considering all the features
-    # accuracies = []
-    # ratio_arr = []
-    # ratio_i = 0.1
-    # while ratio_i < 0.9:
-    #     ratio_arr.append(ratio_i)
-    #     m.split(ratio=ratio_i)
-    #     accuracies.append(m.boosted_trees())
-    #     ratio_i += 0.1
-    # m.plot_accuracies(accuracies, ratio_arr, 'Boosted Trees (XGBoost) Model: Accuracies vs. Ratios')
-    # print(ratio_arr)
-    # print(accuracies)
+    if boosted_trees_info:
+        # Boosted Trees, considering all the features
+        accuracies = []
+        ratio_arr = []
+        ratio_i = 0.1
+        while ratio_i < 0.9:
+            ratio_arr.append(ratio_i)
+            m.split(ratio=ratio_i)
+            accuracies.append(m.boosted_trees())
+            ratio_i += 0.1
+        m.plot_accuracies(accuracies, ratio_arr, 'Boosted Trees (XGBoost) Model: Accuracies vs. Test/Total Ratios')
+        print(ratio_arr)
+        print(accuracies)
+        print("Maximum Accuracy for Boosted Model is {}".format(max(accuracies)))
 
-    # df_temp = df.copy()
-    # accuracies = []
-    # number_removed = []
-    # i=0
-    # while i<len(corr_arr)-1:
-    #     accuracies.append(m.remove_and_boost(corr_arr[i:i+1]))
-    #     number_removed.append(i+1)
-    #     i = i+1
+    remove_and_boost_info = True
+    remove_and_forest_info = True
+    remove_and_svm_info = True
+    df_temp = df.copy()
+    m.setup_dataframe(include_demographics=False,print_stats=False)
 
-    # df=df_temp.copy()
-    # m.plot_accuracies(accuracies, number_removed, 'Boosted Trees (XGBoost) Model: Accuracies vs. Features Removed')
-    # print(number_removed)
-    # print(accuracies)
+    if remove_and_boost_info:
+        accuracies = []
+        number_removed = []
+        i=0
+        while i<len(corr_arr)-1:
+            accuracies.append(m.remove_and_boost(corr_arr[i:i+1]))
+            number_removed.append(i+1)
+            i = i+1
 
-    # m.setup_dataframe(include_demographics=False,print_stats=False)
-    
-    # accuracies = []
-    # removed_tracker = []
-    # number_removed = []
-    # i=0
-    # while i<len(corr_arr)-1:
-    #     removed_tracker.append(corr_arr[i:i+1])
-    #     print("Working with the Subset Removed: {}".format(removed_tracker))
-    #     accuracies.append(m.remove_and_svm(corr_arr[i:i+1]))
-    #     number_removed.append(i+1)
-    #     i = i+1
-    # df=df_temp.copy()
-    # m.plot_accuracies(accuracies, number_removed, 'SVM Model: Accuracies vs. Features Removed')
-    # print(number_removed)
-    # print(accuracies)
+        df=df_temp.copy()
+        m.plot_accuracies(accuracies, number_removed, 'Boosted Trees (XGBoost) Model: Accuracies vs. Features Removed')
+        print(number_removed)
+        print(accuracies)
 
-    # m.setup_dataframe(include_demographics=False,print_stats=False)
+    if remove_and_svm_info:
+        m.setup_dataframe(include_demographics=False,print_stats=False)
+        accuracies = []
+        removed_tracker = []
+        number_removed = []
+        i=0
+        while i<len(corr_arr)-1:
+            removed_tracker.append(corr_arr[i:i+1])
+            print("Working with the Subset Removed: {}".format(removed_tracker))
+            accuracies.append(m.remove_and_svm(corr_arr[i:i+1]))
+            number_removed.append(i+1)
+            i = i+1
+        df=df_temp.copy()
+        m.plot_accuracies(accuracies, number_removed, 'SVM Model: Accuracies vs. Features Removed')
+        print(number_removed)
+        print(accuracies)
 
-    # accuracies = []
-    # removed_tracker = []
-    # number_removed = []
-    # i=0
-    # while i<len(corr_arr)-1:
-    #     removed_tracker.append(corr_arr[i:i+1])
-    #     print("Working with the Subset Removed: {}".format(removed_tracker))
-    #     accuracies.append(m.remove_and_forest(corr_arr[i:i+1]))
-    #     number_removed.append(i+1)
-    #     i = i+1
-    # df=df_temp.copy()
-    # m.plot_accuracies(accuracies, number_removed, 'Forest Model: Accuracies vs. Features Removed')
-    # print(number_removed)
-    # print(accuracies)
+    if remove_and_forest_info:
+        m.setup_dataframe(include_demographics=False,print_stats=False)
 
+        accuracies = []
+        removed_tracker = []
+        number_removed = []
+        i=0
+        while i<len(corr_arr)-1:
+            removed_tracker.append(corr_arr[i:i+1])
+            print("Working with the Subset Removed: {}".format(removed_tracker))
+            accuracies.append(m.remove_and_forest(corr_arr[i:i+1]))
+            number_removed.append(i+1)
+            i = i+1
+        df=df_temp.copy()
+        m.plot_accuracies(accuracies, number_removed, 'Forest Model: Accuracies vs. Features Removed')
+        print(number_removed)
+        print(accuracies)
+
+def func():
     ratio = 0.1
     y_axis = []
     x_axis = []
