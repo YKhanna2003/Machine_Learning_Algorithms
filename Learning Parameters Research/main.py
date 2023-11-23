@@ -214,10 +214,10 @@ def reverse(lst):
     return new_lst
 
 if __name__ == "__main__":
-    print_info = True
-    random_forest_model_info = True
-    svm_model_info = True
-    boosted_trees_info = True
+    print_info = False
+    random_forest_model_info = False
+    svm_model_info = False
+    boosted_trees_info = False
     m= MLModel()
     m.setup('data')
     df = m.setup_dataframe(include_demographics=False, print_stats=False)
@@ -281,9 +281,9 @@ if __name__ == "__main__":
         print(accuracies)
         print("Maximum Accuracy for Boosted Model is {}".format(max(accuracies)))
 
-    remove_and_boost_info = True
-    remove_and_forest_info = True
-    remove_and_svm_info = True
+    remove_and_boost_info = False
+    remove_and_forest_info = False
+    remove_and_svm_info = False
     df_temp = df.copy()
     m.setup_dataframe(include_demographics=False,print_stats=False)
 
@@ -336,7 +336,6 @@ if __name__ == "__main__":
         print(number_removed)
         print(accuracies)
 
-def func():
     ratio = 0.1
     y_axis = []
     x_axis = []
