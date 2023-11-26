@@ -39,17 +39,13 @@ Real-world applications often require extensive training of machine learning alg
 ### Experimental Findings
 
 1. **Random Forest Model (Baseline):**
-   - Initial Accuracy: 0.6384
-   - Feature Removal Impact: Positive effect with the removal of the first feature.
+   - Feature Removal Impact: Positive effect with the removal of the first feature. Removing the features with the lease effects on the output variable comparing the correlation.
    - Threshold Application: Effective in simplifying input space while maintaining an acceptable accuracy.
 
-2. **Boosted Trees Model:**
-   - Initial Accuracy: 0.8744
-   - Feature Removal Impact: Varying effects; careful consideration needed for threshold application.
+2. **Uncertainty Sampling Analysis:**
 
-### Uncertainty Sampling Analysis
-
-- Demonstrated notable enhancement in model accuracy, focusing on uncertain cases over random sampling.
+    - Training the baseline model to cater to the most uncertain data points first rather than being random, comparion and testing.
+    - Demonstrated notable enhancement in model accuracy, focusing on uncertain cases over random sampling.
 
 ### Future Improvements
 
@@ -80,4 +76,19 @@ The provided Python script defines an `MLModel` class, encapsulating various mac
 
 2. Toggle the False to True to see the implementation of different models and classes available in the file for feature removal and comparison.
 
-3. A makefile is provided, run make main to download, setup and test the code.
+   ```python
+    random_forest_model_info = False
+    svm_model_info = False
+    boosted_trees_info = False
+    
+    # Testing the feature removal improvements
+
+    remove_and_boost_info = False
+    remove_and_forest_info = False
+    remove_and_svm_info = False
+
+
+3. A makefile is provided, run the following command to download, setup and test the code.
+
+   ```python
+   make main
