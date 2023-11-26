@@ -400,8 +400,8 @@ if __name__ == "__main__":
     
     plt.figure(figsize=(10, 6))
     plt.plot(x_axis, y_axis, marker='o', linestyle='-', color='b')
-    plt.title("Difference in Sampling Approach vs Train/Test Ratio")
-    plt.xlabel('Train/Test Ratio')
+    plt.title("Difference in Sampling Approach vs Train/Total Ratio")
+    plt.xlabel('Train/Total Ratio')
     plt.ylabel('Difference between Uncertain Sampling vs Random Sampling')
     plt.grid(True)
     plt.show()
